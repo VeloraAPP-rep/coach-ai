@@ -9,7 +9,7 @@ def download_video(url: str):
     output_template = str(DOWNLOAD_DIR / "%(title)s.%(ext)s")
 
     options = {
-        "format": "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]",
+        "format": "137+140/136+140/18",
         "merge_output_format": "mp4",
         "outtmpl": output_template,
         "noplaylist": True,

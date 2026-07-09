@@ -7,6 +7,9 @@ from config import BOT_TOKEN
 from keyboards import video_actions_keyboard
 from services.youtube import download_video, download_audio
 
+from services.whisper_service import transcribe_audio
+from services.markdown import save_transcript_markdown
+
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
@@ -46,8 +49,9 @@ async def handle_download_mp4(callback: types.CallbackQuery):
         filename, title = download_video(url)
 
         await callback.message.answer_video(
-            FSInputFile(filename),
-            caption=title
+            video=FSInputFile(filename),
+            caption=title,
+            supports_streaming=True
         )
 
     except Exception as error:
