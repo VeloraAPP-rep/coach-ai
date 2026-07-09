@@ -6,21 +6,23 @@ from aiogram.types import FSInputFile
 from config import BOT_TOKEN
 from keyboards import video_actions_keyboard
 from services.youtube import download_video, download_audio
-
 from services.whisper_service import transcribe_audio
 from services.markdown import save_transcript_markdown
+from services.openai_summary import make_summary_markdown
 
-bot = Bot(token=BOT_TOKEN)
+from aiogram.client.session.aiohttp import AiohttpSession
+
+session = AiohttpSession(timeout=120)
+bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
 user_links = {}
+user_markdowns = {}
 
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    await message.answer(
-        "Привет. Пришли ссылку на своё YouTube-видео.",
-    )
+    await message.answer("Привет. Пришли ссылку на своё YouTube-видео.")
 
 
 @dp.message(F.text.startswith("http"))
@@ -84,7 +86,51 @@ async def handle_download_mp3(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "make_markdown")
 async def handle_make_markdown(callback: types.CallbackQuery):
     await callback.answer()
-    await callback.message.answer("Markdown добавим следующим шагом.")
+
+    url = user_links.get(callback.from_user.id)
+    if not url:
+        await callback.message.answer("Сначала пришли ссылку.")
+        return
+
+    await callback.message.answer("Скачиваю аудио и делаю расшифровку. Это может занять несколько минут...")
+
+    try:
+        audio_file, title = download_audio(url)
+        transcript = transcribe_audio(audio_file)
+        markdown_file = save_transcript_markdown(title, url, transcript)
+
+        user_markdowns[callback.from_user.id] = markdown_file
+
+        await callback.message.answer_document(
+            FSInputFile(markdown_file),
+            caption="✅ Markdown готов."
+        )
+
+    except Exception as error:
+        await callback.message.answer(f"Ошибка при создании Markdown:\n{error}")
+
+
+@dp.callback_query(F.data == "make_summary")
+async def handle_make_summary(callback: types.CallbackQuery):
+    await callback.answer()
+
+    markdown_file = user_markdowns.get(callback.from_user.id)
+    if not markdown_file:
+        await callback.message.answer("Сначала создайте Markdown.")
+        return
+
+    await callback.message.answer("🧠 Делаю краткое содержание...")
+
+    try:
+        summary_file = make_summary_markdown(markdown_file)
+
+        await callback.message.answer_document(
+            FSInputFile(summary_file),
+            caption="🧠 Summary готов."
+        )
+
+    except Exception as error:
+        await callback.message.answer(f"Ошибка при создании Summary:\n{error}")
 
 
 @dp.message()
