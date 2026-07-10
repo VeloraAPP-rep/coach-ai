@@ -24,5 +24,30 @@ def video_actions_keyboard():
                     callback_data="make_summary"
                 ),
             ],
+            [
+                InlineKeyboardButton(
+                    text="🌍 Перевести Markdown",
+                    callback_data="translate_markdown"
+                ),
+            ],
+        ]
+    )
+
+
+def translation_languages_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🇷🇺 Русский", callback_data="translate:Русский"),
+                InlineKeyboardButton(text="🇬🇧 English", callback_data="translate:English"),
+            ],
+            [
+                InlineKeyboardButton(text="🇪🇸 Español", callback_data="translate:Español"),
+                InlineKeyboardButton(text="🇩🇪 Deutsch", callback_data="translate:Deutsch"),
+            ],
+            [
+                InlineKeyboardButton(text="🇫🇷 Français", callback_data="translate:Français"),
+                InlineKeyboardButton(text="🇮🇹 Italiano", callback_data="translate:Italiano"),
+            ],
         ]
     )

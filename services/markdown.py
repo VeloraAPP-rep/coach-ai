@@ -1,23 +1,42 @@
-@dp.callback_query(F.data == "make_markdown")
-async def handle_make_markdown(callback: types.CallbackQuery):
-    await callback.answer()
+from pathlib import Path
+from datetime import timedelta
 
-    url = user_links.get(callback.from_user.id)
-    if not url:
-        await callback.message.answer("Сначала пришли ссылку.")
-        return
 
-    await callback.message.answer("Скачиваю аудио и делаю расшифровку. Это может занять несколько минут...")
+TRANSCRIPTS_DIR = Path("transcripts")
+TRANSCRIPTS_DIR.mkdir(exist_ok=True)
 
-    try:
-        audio_filename, title = download_audio(url)
-        segments = transcribe_audio(audio_filename)
-        markdown_file = save_transcript_markdown(title, url, segments)
 
-        await callback.message.answer_document(
-            document=FSInputFile(markdown_file),
-            caption=f"Готов Markdown: {title}"
-        )
+def format_time(seconds: float) -> str:
+    seconds = int(seconds)
+    return str(timedelta(seconds=seconds))
 
-    except Exception as error:
-        await callback.message.answer(f"Ошибка при создании Markdown:\n{error}")
+
+def save_transcript_markdown(title: str, url: str, segments: list[dict]) -> str:
+    safe_title = "".join(
+        c for c in title
+        if c.isalnum() or c in (" ", "-", "_")
+    ).strip()
+
+    if not safe_title:
+        safe_title = "transcript"
+
+    filename = TRANSCRIPTS_DIR / f"{safe_title[:80]}.md"
+
+    lines = [
+        f"# {title}",
+        "",
+        f"Источник: {url}",
+        "",
+        "## Расшифровка",
+        "",
+    ]
+
+    for segment in segments:
+        start = format_time(segment["start"])
+        text = segment["text"]
+        if text:
+            lines.append(f"**{start}** — {text}")
+            lines.append("")
+
+    filename.write_text("\n".join(lines), encoding="utf-8-sig")
+    return str(filename)

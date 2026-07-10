@@ -4,11 +4,12 @@ from aiogram.filters import CommandStart
 from aiogram.types import FSInputFile
 
 from config import BOT_TOKEN
-from keyboards import video_actions_keyboard
+from keyboards import video_actions_keyboard, translation_languages_keyboard
 from services.youtube import download_video, download_audio
 from services.whisper_service import transcribe_audio
 from services.markdown import save_transcript_markdown
 from services.openai_summary import make_summary_markdown
+from services.translate import translate_markdown
 
 from aiogram.client.session.aiohttp import AiohttpSession
 
@@ -131,6 +132,42 @@ async def handle_make_summary(callback: types.CallbackQuery):
 
     except Exception as error:
         await callback.message.answer(f"Ошибка при создании Summary:\n{error}")
+
+
+@dp.callback_query(F.data == "translate_markdown")
+async def handle_translate_markdown(callback: types.CallbackQuery):
+    await callback.answer()
+
+    if not user_markdowns.get(callback.from_user.id):
+        await callback.message.answer("Сначала создайте Markdown.")
+        return
+
+    await callback.message.answer(
+        "Выберите язык перевода:",
+        reply_markup=translation_languages_keyboard(),
+    )
+
+
+@dp.callback_query(F.data.startswith("translate:"))
+async def handle_translation_language(callback: types.CallbackQuery):
+    await callback.answer()
+
+    markdown_file = user_markdowns.get(callback.from_user.id)
+    if not markdown_file:
+        await callback.message.answer("Сначала создайте Markdown.")
+        return
+
+    target_language = callback.data.partition(":")[2]
+    await callback.message.answer("Перевожу Markdown. Это может занять несколько минут...")
+
+    try:
+        translated_file = translate_markdown(markdown_file, target_language)
+        await callback.message.answer_document(
+            FSInputFile(translated_file),
+            caption="✅ Перевод готов.",
+        )
+    except Exception as error:
+        await callback.message.answer(f"Ошибка при переводе:\n{error}")
 
 
 @dp.message()

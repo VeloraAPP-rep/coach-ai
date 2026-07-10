@@ -28,6 +28,7 @@ mdurl==0.1.2
 multidict==6.7.1
 numpy==2.5.0
 onnxruntime==1.27.0
+openai>=1.0.0,<2.0.0
 packaging==26.2
 propcache==0.5.2
 protobuf==7.35.1
