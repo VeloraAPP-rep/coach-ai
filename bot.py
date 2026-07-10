@@ -232,7 +232,11 @@ async def handle_download_reel(callback: types.CallbackQuery):
     await callback.message.answer("Скачиваю Reel...")
     try:
         filename, title = download_reel(url)
-        await callback.message.answer_video(FSInputFile(filename), caption=title)
+        await callback.message.answer_video(
+            FSInputFile(filename),
+            caption=title,
+            supports_streaming=True,
+        )
     except Exception as error:
         await callback.message.answer(
             f"Ошибка при скачивании Reel:\n{reel_error_message(error)}"

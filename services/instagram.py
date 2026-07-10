@@ -1,4 +1,5 @@
 import os
+import subprocess
 from pathlib import Path
 
 from yt_dlp import YoutubeDL
@@ -48,7 +49,37 @@ def download_reel(url: str) -> tuple[str, str]:
     mp4_filename = filename.with_suffix(".mp4")
     if mp4_filename.exists():
         filename = mp4_filename
-    return str(filename), info.get("title") or f"Instagram Reel {info.get('id', '')}"
+
+    telegram_filename = filename.with_name(f"{filename.stem}_telegram.mp4")
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(filename),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-profile:v",
+            "high",
+            "-level",
+            "4.0",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-movflags",
+            "+faststart",
+            str(telegram_filename),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return str(telegram_filename), info.get("title") or f"Instagram Reel {info.get('id', '')}"
 
 
 def download_reel_audio(url: str) -> tuple[str, str]:
