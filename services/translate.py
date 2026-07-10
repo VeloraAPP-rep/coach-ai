@@ -48,6 +48,23 @@ def _translate_batch(texts: list[str], language_code: str) -> list[str]:
     return [item["text"] for item in translations]
 
 
+def translate_texts(texts: list[str], language_code: str) -> list[str]:
+    translated: list[str] = []
+    batch: list[str] = []
+    batch_chars = 0
+
+    for text in texts:
+        if batch and (len(batch) >= 50 or batch_chars + len(text) > 9000):
+            translated.extend(_translate_batch(batch, language_code))
+            batch, batch_chars = [], 0
+        batch.append(text)
+        batch_chars += len(text)
+
+    if batch:
+        translated.extend(_translate_batch(batch, language_code))
+    return translated
+
+
 def _parts(line: str) -> tuple[str, str, str]:
     if not line.strip():
         return line, "", ""

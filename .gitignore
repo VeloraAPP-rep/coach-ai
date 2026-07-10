@@ -3,6 +3,8 @@ __pycache__/
 downloads/
 transcripts/
 summaries/
+subtitles/
+translations/
 .env
 .DS_Store
 *.pyc

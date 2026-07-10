@@ -57,3 +57,23 @@ def translation_languages_keyboard():
             ],
         ]
     )
+
+
+def reel_actions_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📹 Скачать Reel", callback_data="download_reel"),
+                InlineKeyboardButton(text="📝 Markdown", callback_data="reel_markdown"),
+            ],
+            [
+                InlineKeyboardButton(text="🇷🇺 Субтитры SRT", callback_data="reel_srt_ru"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🎬 Видео с RU-субтитрами",
+                    callback_data="reel_video_ru",
+                ),
+            ],
+        ]
+    )
