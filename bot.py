@@ -17,6 +17,7 @@ from services.translate import translate_markdown
 from services.trainer_translate import make_trainer_translation
 from services.instagram import download_reel, download_reel_audio, is_instagram_url
 from services.subtitles import burn_subtitles, save_translated_srt
+from services.dubbing import create_russian_dub
 
 from aiogram.client.session.aiohttp import AiohttpSession
 
@@ -308,6 +309,30 @@ async def handle_reel_video_ru(callback: types.CallbackQuery):
     except Exception as error:
         await callback.message.answer(
             f"Ошибка перевода Reel:\n{reel_error_message(error)}"
+        )
+
+
+@dp.callback_query(F.data == "reel_voice_ru")
+async def handle_reel_voice_ru(callback: types.CallbackQuery):
+    await callback.answer()
+    url = user_links.get(callback.from_user.id)
+    if not url or not is_instagram_url(url):
+        await callback.message.answer("Сначала пришлите ссылку на Instagram Reel.")
+        return
+
+    await callback.message.answer("Создаю русскую озвучку. Это может занять несколько минут...")
+    try:
+        segments, title = get_reel_transcript(callback.from_user.id, url)
+        video_file, _ = download_reel(url)
+        dubbed_video = create_russian_dub(video_file, title, segments)
+        await callback.message.answer_video(
+            FSInputFile(dubbed_video),
+            caption="🎙️ Reel с русской озвучкой готов.",
+            supports_streaming=True,
+        )
+    except Exception as error:
+        await callback.message.answer(
+            f"Ошибка озвучивания Reel:\n{reel_error_message(error)}"
         )
 
 

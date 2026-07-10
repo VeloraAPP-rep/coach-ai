@@ -75,5 +75,11 @@ def reel_actions_keyboard():
                     callback_data="reel_video_ru",
                 ),
             ],
+            [
+                InlineKeyboardButton(
+                    text="🎙️ Reel с RU-озвучкой",
+                    callback_data="reel_voice_ru",
+                ),
+            ],
         ]
     )

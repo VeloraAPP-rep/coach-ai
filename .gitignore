@@ -6,6 +6,7 @@ summaries/
 subtitles/
 translations/
 secrets/
+voiceovers/
 .env
 .DS_Store
 *.pyc
