@@ -23,6 +23,11 @@ def _srt_time(seconds: float) -> str:
 
 
 def save_translated_srt(title: str, segments: list[dict]) -> str:
+    if not segments:
+        raise RuntimeError(
+            "В Reel не обнаружена речь. Если текст показан только на видео, нужен OCR кадров."
+        )
+
     source_texts = [segment["text"] for segment in segments]
     translated_texts = translate_texts(source_texts, "ru")
     if len(translated_texts) != len(segments):
