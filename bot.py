@@ -30,6 +30,16 @@ user_reel_segments = {}
 user_reel_titles = {}
 
 
+def reel_error_message(error: Exception) -> str:
+    text = str(error)
+    if "empty media response" in text.lower() or "cookies" in text.lower():
+        return (
+            "Instagram не отдал видео серверу. Для скачивания нужна "
+            "авторизованная сессия Instagram (cookies)."
+        )
+    return text[:1000]
+
+
 @dp.message(CommandStart())
 async def start(message: types.Message):
     await message.answer("Привет. Пришли ссылку на своё YouTube-видео.")
@@ -224,7 +234,9 @@ async def handle_download_reel(callback: types.CallbackQuery):
         filename, title = download_reel(url)
         await callback.message.answer_video(FSInputFile(filename), caption=title)
     except Exception as error:
-        await callback.message.answer(f"Ошибка при скачивании Reel:\n{error}")
+        await callback.message.answer(
+            f"Ошибка при скачивании Reel:\n{reel_error_message(error)}"
+        )
 
 
 @dp.callback_query(F.data == "reel_markdown")
@@ -244,7 +256,9 @@ async def handle_reel_markdown(callback: types.CallbackQuery):
             FSInputFile(markdown_file), caption="✅ Markdown для Reel готов."
         )
     except Exception as error:
-        await callback.message.answer(f"Ошибка расшифровки Reel:\n{error}")
+        await callback.message.answer(
+            f"Ошибка расшифровки Reel:\n{reel_error_message(error)}"
+        )
 
 
 @dp.callback_query(F.data == "reel_srt_ru")
@@ -263,7 +277,9 @@ async def handle_reel_srt(callback: types.CallbackQuery):
             FSInputFile(srt_file), caption="🇷🇺 Русские субтитры готовы."
         )
     except Exception as error:
-        await callback.message.answer(f"Ошибка создания субтитров:\n{error}")
+        await callback.message.answer(
+            f"Ошибка создания субтитров:\n{reel_error_message(error)}"
+        )
 
 
 @dp.callback_query(F.data == "reel_video_ru")
@@ -286,7 +302,9 @@ async def handle_reel_video_ru(callback: types.CallbackQuery):
             supports_streaming=True,
         )
     except Exception as error:
-        await callback.message.answer(f"Ошибка перевода Reel:\n{error}")
+        await callback.message.answer(
+            f"Ошибка перевода Reel:\n{reel_error_message(error)}"
+        )
 
 
 @dp.message()

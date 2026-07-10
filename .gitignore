@@ -5,6 +5,7 @@ transcripts/
 summaries/
 subtitles/
 translations/
+secrets/
 .env
 .DS_Store
 *.pyc
