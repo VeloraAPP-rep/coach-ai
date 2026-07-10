@@ -10,6 +10,7 @@ from services.whisper_service import transcribe_audio
 from services.markdown import save_transcript_markdown
 from services.openai_summary import make_summary_markdown
 from services.translate import translate_markdown
+from services.trainer_translate import make_trainer_translation
 
 from aiogram.client.session.aiohttp import AiohttpSession
 
@@ -168,6 +169,29 @@ async def handle_translation_language(callback: types.CallbackQuery):
         )
     except Exception as error:
         await callback.message.answer(f"Ошибка при переводе:\n{error}")
+
+
+@dp.callback_query(F.data == "trainer_translation")
+async def handle_trainer_translation(callback: types.CallbackQuery):
+    await callback.answer()
+
+    markdown_file = user_markdowns.get(callback.from_user.id)
+    if not markdown_file:
+        await callback.message.answer("Сначала создайте Markdown.")
+        return
+
+    await callback.message.answer(
+        "Делаю тренерский перевод: сохраняю термины и добавляю словарь..."
+    )
+
+    try:
+        translated_file = make_trainer_translation(markdown_file)
+        await callback.message.answer_document(
+            FSInputFile(translated_file),
+            caption="🧠 Тренерский перевод готов.",
+        )
+    except Exception as error:
+        await callback.message.answer(f"Ошибка тренерского перевода:\n{error}")
 
 
 @dp.message()

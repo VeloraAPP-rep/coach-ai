@@ -30,6 +30,12 @@ def video_actions_keyboard():
                     callback_data="translate_markdown"
                 ),
             ],
+            [
+                InlineKeyboardButton(
+                    text="🧠 Тренерский перевод (RU)",
+                    callback_data="trainer_translation"
+                ),
+            ],
         ]
     )
 
