@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 
 from services.translate import translate_texts
+from services.media import prepare_video_for_telegram
 
 
 SUBTITLES_DIR = Path("subtitles")
@@ -67,4 +68,4 @@ def burn_subtitles(video_path: str, srt_path: str, title: str) -> str:
         capture_output=True,
         text=True,
     )
-    return str(output_path)
+    return prepare_video_for_telegram(str(output_path))

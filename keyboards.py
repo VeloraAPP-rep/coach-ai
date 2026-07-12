@@ -36,6 +36,21 @@ def video_actions_keyboard():
                     callback_data="trainer_translation"
                 ),
             ],
+            [
+                InlineKeyboardButton(text="🇷🇺 Субтитры SRT", callback_data="source_srt_ru"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🎬 Видео с RU-субтитрами",
+                    callback_data="source_video_ru",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🎙️ Видео с RU-озвучкой",
+                    callback_data="source_voice_ru",
+                ),
+            ],
         ]
     )
 
@@ -67,18 +82,31 @@ def reel_actions_keyboard():
                 InlineKeyboardButton(text="📝 Markdown", callback_data="reel_markdown"),
             ],
             [
-                InlineKeyboardButton(text="🇷🇺 Субтитры SRT", callback_data="reel_srt_ru"),
+                InlineKeyboardButton(text="🧠 Summary", callback_data="make_summary"),
+                InlineKeyboardButton(
+                    text="🌍 Перевести Markdown",
+                    callback_data="translate_markdown",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🧠 Тренерский перевод (RU)",
+                    callback_data="trainer_translation",
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="🇷🇺 Субтитры SRT", callback_data="source_srt_ru"),
             ],
             [
                 InlineKeyboardButton(
                     text="🎬 Видео с RU-субтитрами",
-                    callback_data="reel_video_ru",
+                    callback_data="source_video_ru",
                 ),
             ],
             [
                 InlineKeyboardButton(
                     text="🎙️ Reel с RU-озвучкой",
-                    callback_data="reel_voice_ru",
+                    callback_data="source_voice_ru",
                 ),
             ],
         ]

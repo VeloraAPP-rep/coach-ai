@@ -15,10 +15,11 @@ from services.markdown import save_transcript_markdown
 from services.openai_summary import make_summary_markdown
 from services.translate import translate_markdown
 from services.trainer_translate import make_trainer_translation
-from services.instagram import download_reel, download_reel_audio, is_instagram_url
+from services.instagram import download_reel, is_instagram_url
 from services.subtitles import burn_subtitles, save_translated_srt
 from services.dubbing import create_russian_dub
 from services.progress import run_with_progress
+from services.source import download_source_audio, download_source_video
 
 from aiogram.client.session.aiohttp import AiohttpSession
 
@@ -56,11 +57,11 @@ async def receive_link(message: types.Message):
     await message.answer("Что сделать с видео?", reply_markup=keyboard)
 
 
-def get_reel_transcript(user_id: int, url: str, progress=None) -> tuple[list[dict], str]:
+def get_source_transcript(user_id: int, url: str, progress=None) -> tuple[list[dict], str]:
     if user_id in user_reel_segments:
         return user_reel_segments[user_id], user_reel_titles[user_id]
 
-    audio_file, title = download_reel_audio(url, progress)
+    audio_file, title = download_source_audio(url, progress)
     if progress:
         progress.update("📝 Расшифровка Reel: 0%")
     segments = transcribe_audio(audio_file, progress)
@@ -301,7 +302,7 @@ async def handle_reel_markdown(callback: types.CallbackQuery):
         segments, title = await run_with_progress(
             status,
             "📥 Подготовка Reel к расшифровке",
-            lambda progress: get_reel_transcript(
+            lambda progress: get_source_transcript(
                 callback.from_user.id, url, progress
             ),
         )
@@ -317,72 +318,104 @@ async def handle_reel_markdown(callback: types.CallbackQuery):
         )
 
 
-@dp.callback_query(F.data == "reel_srt_ru")
-async def handle_reel_srt(callback: types.CallbackQuery):
+@dp.callback_query(F.data.in_({"reel_srt_ru", "source_srt_ru"}))
+async def handle_source_srt(callback: types.CallbackQuery):
     await callback.answer()
     url = user_links.get(callback.from_user.id)
-    if not url or not is_instagram_url(url):
-        await callback.message.answer("Сначала пришлите ссылку на Instagram Reel.")
+    if not url:
+        await callback.message.answer("Сначала пришлите ссылку на видео.")
         return
 
-    await callback.message.answer("Создаю русские субтитры...")
+    status = await callback.message.answer("🇷🇺 Создаю русские субтитры...")
     try:
-        segments, title = get_reel_transcript(callback.from_user.id, url)
-        srt_file = save_translated_srt(title, segments)
+        def build_srt(progress):
+            segments, title = get_source_transcript(
+                callback.from_user.id, url, progress
+            )
+            progress.update("🌍 Перевод субтитров")
+            return save_translated_srt(title, segments)
+
+        srt_file = await run_with_progress(status, "📥 Подготовка видео", build_srt)
         await callback.message.answer_document(
             FSInputFile(srt_file), caption="🇷🇺 Русские субтитры готовы."
         )
+        await status.edit_text("✅ Русские субтитры готовы.")
     except Exception as error:
-        await callback.message.answer(
+        await status.edit_text(
             f"Ошибка создания субтитров:\n{reel_error_message(error)}"
         )
 
 
-@dp.callback_query(F.data == "reel_video_ru")
-async def handle_reel_video_ru(callback: types.CallbackQuery):
+@dp.callback_query(F.data.in_({"reel_video_ru", "source_video_ru"}))
+async def handle_source_video_ru(callback: types.CallbackQuery):
     await callback.answer()
     url = user_links.get(callback.from_user.id)
-    if not url or not is_instagram_url(url):
-        await callback.message.answer("Сначала пришлите ссылку на Instagram Reel.")
+    if not url:
+        await callback.message.answer("Сначала пришлите ссылку на видео.")
         return
 
-    await callback.message.answer("Создаю видео с русскими субтитрами...")
+    status = await callback.message.answer("🎬 Создаю видео с русскими субтитрами...")
     try:
-        segments, title = get_reel_transcript(callback.from_user.id, url)
-        srt_file = save_translated_srt(title, segments)
-        video_file, _ = download_reel(url)
-        subtitled_video = burn_subtitles(video_file, srt_file, title)
+        def build_subtitled_video(progress):
+            segments, title = get_source_transcript(
+                callback.from_user.id, url, progress
+            )
+            progress.update("🌍 Перевод субтитров")
+            srt_file = save_translated_srt(title, segments)
+            progress.update("📥 Подготовка исходного видео")
+            video_file, _ = download_source_video(url, progress)
+            progress.update("🎬 Встраивание субтитров")
+            return burn_subtitles(video_file, srt_file, title)
+
+        subtitled_video = await run_with_progress(
+            status, "📥 Подготовка видео", build_subtitled_video
+        )
+        await status.edit_text("📤 Отправка видео в Telegram...")
         await callback.message.answer_video(
             FSInputFile(subtitled_video),
             caption="🎬 Reel с русскими субтитрами готов.",
             supports_streaming=True,
         )
+        await status.edit_text("✅ Видео с русскими субтитрами готово.")
     except Exception as error:
-        await callback.message.answer(
+        await status.edit_text(
             f"Ошибка перевода Reel:\n{reel_error_message(error)}"
         )
 
 
-@dp.callback_query(F.data == "reel_voice_ru")
-async def handle_reel_voice_ru(callback: types.CallbackQuery):
+@dp.callback_query(F.data.in_({"reel_voice_ru", "source_voice_ru"}))
+async def handle_source_voice_ru(callback: types.CallbackQuery):
     await callback.answer()
     url = user_links.get(callback.from_user.id)
-    if not url or not is_instagram_url(url):
-        await callback.message.answer("Сначала пришлите ссылку на Instagram Reel.")
+    if not url:
+        await callback.message.answer("Сначала пришлите ссылку на видео.")
         return
 
-    await callback.message.answer("Создаю русскую озвучку. Это может занять несколько минут...")
+    status = await callback.message.answer(
+        "🎙️ Создаю русскую озвучку. Это может занять несколько минут..."
+    )
     try:
-        segments, title = get_reel_transcript(callback.from_user.id, url)
-        video_file, _ = download_reel(url)
-        dubbed_video = create_russian_dub(video_file, title, segments)
+        def build_dub(progress):
+            segments, title = get_source_transcript(
+                callback.from_user.id, url, progress
+            )
+            progress.update("📥 Подготовка исходного видео")
+            video_file, _ = download_source_video(url, progress)
+            progress.update("🎙️ Синтез русской речи")
+            return create_russian_dub(video_file, title, segments)
+
+        dubbed_video = await run_with_progress(
+            status, "📥 Подготовка видео", build_dub
+        )
+        await status.edit_text("📤 Отправка озвученного видео...")
         await callback.message.answer_video(
             FSInputFile(dubbed_video),
             caption="🎙️ Reel с русской озвучкой готов.",
             supports_streaming=True,
         )
+        await status.edit_text("✅ Видео с русской озвучкой готово.")
     except Exception as error:
-        await callback.message.answer(
+        await status.edit_text(
             f"Ошибка озвучивания Reel:\n{reel_error_message(error)}"
         )
 

@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 
 from services.translate import translate_texts
+from services.media import prepare_video_for_telegram
 
 
 VOICEOVERS_DIR = Path("voiceovers")
@@ -134,4 +135,4 @@ def create_russian_dub(
         ]
     )
     subprocess.run(command, check=True, capture_output=True, text=True)
-    return str(output_path)
+    return prepare_video_for_telegram(str(output_path))
