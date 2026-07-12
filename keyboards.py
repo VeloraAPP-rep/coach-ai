@@ -51,6 +51,12 @@ def video_actions_keyboard():
                     callback_data="source_voice_ru",
                 ),
             ],
+            [
+                InlineKeyboardButton(
+                    text="🔤 Настроить ударение",
+                    callback_data="pronunciation_settings",
+                ),
+            ],
         ]
     )
 
@@ -107,6 +113,12 @@ def reel_actions_keyboard():
                 InlineKeyboardButton(
                     text="🎙️ Reel с RU-озвучкой",
                     callback_data="source_voice_ru",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔤 Настроить ударение",
+                    callback_data="pronunciation_settings",
                 ),
             ],
         ]

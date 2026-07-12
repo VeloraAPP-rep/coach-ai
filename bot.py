@@ -20,6 +20,7 @@ from services.subtitles import burn_subtitles, save_translated_srt
 from services.dubbing import create_russian_dub
 from services.progress import run_with_progress
 from services.source import download_source_audio, download_source_video
+from services.pronunciation import list_pronunciations, set_pronunciation
 
 from aiogram.client.session.aiohttp import AiohttpSession
 
@@ -31,6 +32,7 @@ user_links = {}
 user_markdowns = {}
 user_reel_segments = {}
 user_reel_titles = {}
+awaiting_pronunciation = set()
 
 
 def reel_error_message(error: Exception) -> str:
@@ -424,8 +426,51 @@ async def handle_source_voice_ru(callback: types.CallbackQuery):
         )
 
 
+@dp.callback_query(F.data == "pronunciation_settings")
+async def handle_pronunciation_settings(callback: types.CallbackQuery):
+    await callback.answer()
+    awaiting_pronunciation.add(callback.from_user.id)
+
+    entries = list_pronunciations(20)
+    current = "\n".join(f"• {term} → {marked}" for term, marked in entries)
+    await callback.message.answer(
+        "🔤 Отправьте исправление в формате:\n\n"
+        "каденс = кад+енс\n\n"
+        "+ ставится перед ударной гласной. Разметка применяется только к озвучке.\n"
+        "Для отмены отправьте /cancel.\n\n"
+        f"Текущий словарь:\n{current or 'пока пуст'}"
+    )
+
+
 @dp.message()
 async def unknown(message: types.Message):
+    user_id = message.from_user.id
+    if user_id in awaiting_pronunciation and message.text:
+        if message.text.strip().lower() == "/cancel":
+            awaiting_pronunciation.discard(user_id)
+            await message.answer("Настройка ударения отменена.")
+            return
+
+        if "=" not in message.text:
+            await message.answer(
+                "Используйте формат: термин = вариант с ударением\n"
+                "Например: каденс = кад+енс"
+            )
+            return
+
+        term, marked_text = message.text.split("=", 1)
+        try:
+            set_pronunciation(term, marked_text)
+            awaiting_pronunciation.discard(user_id)
+            await message.answer(
+                f"✅ Произношение сохранено:\n"
+                f"{term.strip().lower()} → {marked_text.strip().lower()}\n\n"
+                "Оно будет применено при следующей генерации озвучки."
+            )
+        except ValueError as error:
+            await message.answer(f"Ошибка: {error}")
+        return
+
     await message.answer("Пришли ссылку на YouTube-видео.")
 
 

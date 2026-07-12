@@ -7,6 +7,7 @@ import httpx
 
 from services.translate import translate_texts
 from services.media import prepare_video_for_telegram
+from services.pronunciation import apply_pronunciations
 
 
 VOICEOVERS_DIR = Path("voiceovers")
@@ -23,6 +24,7 @@ def _synthesize(text: str, output_path: Path, target_seconds: float) -> None:
     if not api_key:
         raise RuntimeError("YANDEX_API_KEY не настроен")
 
+    text = apply_pronunciations(text)
     estimated_speed = len(text) / max(target_seconds * 13, 1)
     speed = min(3.0, max(0.7, estimated_speed))
     response = httpx.post(
