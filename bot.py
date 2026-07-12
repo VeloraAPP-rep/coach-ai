@@ -21,6 +21,7 @@ from services.dubbing import create_russian_dub
 from services.progress import run_with_progress
 from services.source import download_source_audio, download_source_video
 from services.pronunciation import list_pronunciations, set_pronunciation
+from services.terminology import list_terms, set_term
 
 from aiogram.client.session.aiohttp import AiohttpSession
 
@@ -33,6 +34,7 @@ user_markdowns = {}
 user_reel_segments = {}
 user_reel_titles = {}
 awaiting_pronunciation = set()
+awaiting_terminology = set()
 
 
 def reel_error_message(error: Exception) -> str:
@@ -256,7 +258,9 @@ async def handle_trainer_translation(callback: types.CallbackQuery):
         translated_file = await run_with_progress(
             status,
             "🧠 Тренерский редактор обрабатывает термины",
-            lambda progress: make_trainer_translation(markdown_file),
+            lambda progress: make_trainer_translation(
+                markdown_file, callback.from_user.id
+            ),
         )
         await callback.message.answer_document(
             FSInputFile(translated_file),
@@ -442,9 +446,66 @@ async def handle_pronunciation_settings(callback: types.CallbackQuery):
     )
 
 
+@dp.callback_query(F.data == "terminology_settings")
+async def handle_terminology_settings(callback: types.CallbackQuery):
+    await callback.answer()
+    awaiting_terminology.add(callback.from_user.id)
+
+    entries = list_terms(callback.from_user.id, 20)
+    current = "\n".join(
+        f"• {source} → {translation} [{category}]"
+        for source, translation, _, category in entries
+    )
+    await callback.message.answer(
+        "📚 Отправьте термин или устойчивую фразу в формате:\n\n"
+        "overstride = переразмах шага | "
+        "приземление стопы слишком далеко впереди | бег\n\n"
+        "После = обязательный перевод. Пояснение и категория после | необязательны.\n"
+        "Для отмены отправьте /cancel.\n\n"
+        f"Текущий словарь:\n{current or 'пока пуст'}"
+    )
+
+
 @dp.message()
 async def unknown(message: types.Message):
     user_id = message.from_user.id
+    if user_id in awaiting_terminology and message.text:
+        if message.text.strip().lower() == "/cancel":
+            awaiting_terminology.discard(user_id)
+            await message.answer("Настройка термина отменена.")
+            return
+
+        if "=" not in message.text:
+            await message.answer(
+                "Используйте формат:\n"
+                "термин = перевод | пояснение | категория"
+            )
+            return
+
+        source_term, details = message.text.split("=", 1)
+        parts = [part.strip() for part in details.split("|", 2)]
+        translation = parts[0] if parts else ""
+        explanation = parts[1] if len(parts) > 1 else ""
+        category = parts[2] if len(parts) > 2 else "общее"
+        try:
+            set_term(
+                user_id,
+                source_term,
+                translation,
+                explanation,
+                category,
+            )
+            awaiting_terminology.discard(user_id)
+            await message.answer(
+                "✅ Термин сохранён:\n"
+                f"{source_term.strip().lower()} → {translation}\n"
+                f"Категория: {category}\n\n"
+                "Он будет применён в следующем тренерском переводе."
+            )
+        except ValueError as error:
+            await message.answer(f"Ошибка: {error}")
+        return
+
     if user_id in awaiting_pronunciation and message.text:
         if message.text.strip().lower() == "/cancel":
             awaiting_pronunciation.discard(user_id)

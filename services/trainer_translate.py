@@ -5,65 +5,10 @@ from pathlib import Path
 from openai import OpenAI
 
 from services.translate import translate_markdown
+from services.terminology import glossary_for_user
 
 
 TRAINER_TRANSLATIONS_DIR = Path("translations")
-
-RUNNING_GLOSSARY = {
-    "overstride": (
-        "переразмах шага",
-        "приземление стопы слишком далеко впереди относительно центра массы",
-    ),
-    "overstriding": (
-        "переразмах шага",
-        "приземление стопы слишком далеко впереди относительно центра массы",
-    ),
-    "cadence": (
-        "каденс",
-        "частота шагов, обычно измеряемая количеством шагов в минуту",
-    ),
-    "ground contact time": (
-        "время контакта с опорой",
-        "продолжительность контакта стопы с поверхностью при каждом шаге",
-    ),
-    "hip drop": (
-        "опускание таза",
-        "снижение противоположной стороны таза во время опорной фазы шага",
-    ),
-    "pronation": (
-        "пронация",
-        "естественное движение стопы с перекатом внутрь во время опоры",
-    ),
-    "propulsion": (
-        "отталкивание",
-        "фаза шага, в которой тело получает направленный вперёд импульс",
-    ),
-    "running economy": (
-        "экономичность бега",
-        "энергетические затраты при заданной скорости бега",
-    ),
-    "stride length": (
-        "длина шага",
-        "расстояние, преодолеваемое за один шаг",
-    ),
-    "rate of perceived exertion": (
-        "субъективная оценка нагрузки",
-        "самооценка интенсивности усилия по шкале RPE",
-    ),
-    "range of motion": (
-        "амплитуда движения",
-        "диапазон движения в суставе или упражнении",
-    ),
-    "progressive overload": (
-        "прогрессивная перегрузка",
-        "постепенное повышение тренировочной нагрузки",
-    ),
-    "reps in reserve": (
-        "повторения в запасе",
-        "число дополнительных повторений, которые спортсмен мог бы выполнить до отказа",
-    ),
-}
-
 
 def _trainer_client() -> tuple[OpenAI, str]:
     api_key = os.getenv("YANDEX_API_KEY")
@@ -80,12 +25,13 @@ def _annotate_line(
     original: str,
     translated: str,
     found_terms: set[str],
+    glossary: dict[str, tuple[str, str]],
     client: OpenAI | None = None,
     model: str | None = None,
 ) -> str:
     result = translated
     line_terms = []
-    for english, (russian, _) in RUNNING_GLOSSARY.items():
+    for english, (russian, _) in glossary.items():
         if not re.search(rf"\b{re.escape(english)}\b", original, re.IGNORECASE):
             continue
 
@@ -130,7 +76,7 @@ def _annotate_line(
     return result
 
 
-def make_trainer_translation(markdown_path: str) -> str:
+def make_trainer_translation(markdown_path: str, user_id: int = 0) -> str:
     source_path = Path(markdown_path)
     literal_path = Path(translate_markdown(markdown_path, "Русский"))
 
@@ -140,16 +86,17 @@ def make_trainer_translation(markdown_path: str) -> str:
         raise RuntimeError("Количество строк оригинала и перевода не совпадает")
 
     found_terms: set[str] = set()
+    glossary = glossary_for_user(user_id)
     client, model = _trainer_client()
     annotated = [
-        _annotate_line(original, translated, found_terms, client, model)
+        _annotate_line(original, translated, found_terms, glossary, client, model)
         for original, translated in zip(original_lines, translated_lines)
     ]
 
     if found_terms:
         annotated.extend(["", "## Словарь тренера", ""])
         for term in sorted(found_terms):
-            russian, explanation = RUNNING_GLOSSARY[term]
+            russian, explanation = glossary[term]
             annotated.append(f"- **{russian} ({term})** — {explanation}.")
 
     output_path = TRAINER_TRANSLATIONS_DIR / f"{source_path.stem}_Тренерский.md"

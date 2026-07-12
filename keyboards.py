@@ -57,6 +57,12 @@ def video_actions_keyboard():
                     callback_data="pronunciation_settings",
                 ),
             ],
+            [
+                InlineKeyboardButton(
+                    text="📚 Настроить термин",
+                    callback_data="terminology_settings",
+                ),
+            ],
         ]
     )
 
@@ -119,6 +125,12 @@ def reel_actions_keyboard():
                 InlineKeyboardButton(
                     text="🔤 Настроить ударение",
                     callback_data="pronunciation_settings",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📚 Настроить термин",
+                    callback_data="terminology_settings",
                 ),
             ],
         ]
