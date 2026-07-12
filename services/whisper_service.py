@@ -14,7 +14,7 @@ def get_model():
     return _model
 
 
-def transcribe_audio(audio_path: str) -> list[dict]:
+def transcribe_audio(audio_path: str, progress=None) -> list[dict]:
     model = get_model()
 
     segments, info = model.transcribe(
@@ -27,6 +27,9 @@ def transcribe_audio(audio_path: str) -> list[dict]:
     result = []
 
     for segment in segments:
+        if progress and info.duration:
+            percent = min(100, int(float(segment.end) / float(info.duration) * 100))
+            progress.update(f"📝 Расшифровка: {percent}%")
         result.append(
             {
                 "start": float(segment.start),

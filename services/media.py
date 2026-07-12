@@ -25,10 +25,13 @@ def _duration(path: Path) -> float:
     return float(result.stdout.strip())
 
 
-def prepare_video_for_telegram(filename: str) -> str:
+def prepare_video_for_telegram(filename: str, progress=None) -> str:
     source = Path(filename)
     if source.stat().st_size <= TELEGRAM_UPLOAD_LIMIT:
         return str(source)
+
+    if progress:
+        progress.update("🗜 Сжатие видео: проход 1 / 2")
 
     duration = _duration(source)
     audio_bitrate = 64_000
@@ -75,6 +78,8 @@ def prepare_video_for_telegram(filename: str) -> str:
         capture_output=True,
         text=True,
     )
+    if progress:
+        progress.update("🗜 Сжатие видео: проход 2 / 2")
     subprocess.run(
         [
             "ffmpeg",

@@ -28,18 +28,31 @@ def _common_options() -> dict:
     return options
 
 
+def _progress_hook(progress):
+    def hook(data):
+        if not progress:
+            return
+        if data.get("status") == "downloading":
+            percent = data.get("_percent_str", "").strip()
+            progress.update(f"📥 Скачивание Reel: {percent}")
+        elif data.get("status") == "finished":
+            progress.update("⚙️ Подготовка Reel для Telegram")
+    return hook
+
+
 def is_instagram_url(url: str) -> bool:
     lowered = url.lower()
     return "instagram.com/reel/" in lowered or "instagram.com/reels/" in lowered
 
 
-def download_reel(url: str) -> tuple[str, str]:
+def download_reel(url: str, progress=None) -> tuple[str, str]:
     output_template = str(DOWNLOAD_DIR / "instagram_%(id)s.%(ext)s")
     options = {
         **_common_options(),
         "format": "bestvideo+bestaudio/best",
         "merge_output_format": "mp4",
         "outtmpl": output_template,
+        "progress_hooks": [_progress_hook(progress)],
     }
 
     with YoutubeDL(options) as ydl:
@@ -82,12 +95,13 @@ def download_reel(url: str) -> tuple[str, str]:
     return str(telegram_filename), info.get("title") or f"Instagram Reel {info.get('id', '')}"
 
 
-def download_reel_audio(url: str) -> tuple[str, str]:
+def download_reel_audio(url: str, progress=None) -> tuple[str, str]:
     output_template = str(DOWNLOAD_DIR / "instagram_%(id)s.%(ext)s")
     options = {
         **_common_options(),
         "format": "bestaudio/best",
         "outtmpl": output_template,
+        "progress_hooks": [_progress_hook(progress)],
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
