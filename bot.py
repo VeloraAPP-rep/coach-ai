@@ -51,7 +51,11 @@ async def start(message: types.Message):
 @dp.message(F.text.startswith("http"))
 async def receive_link(message: types.Message):
     url = message.text.strip()
-    user_links[message.from_user.id] = url
+    user_id = message.from_user.id
+    user_links[user_id] = url
+    user_markdowns.pop(user_id, None)
+    user_reel_segments.pop(user_id, None)
+    user_reel_titles.pop(user_id, None)
 
     keyboard = reel_actions_keyboard() if is_instagram_url(url) else video_actions_keyboard()
     await message.answer("Что сделать с видео?", reply_markup=keyboard)
