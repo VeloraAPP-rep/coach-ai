@@ -1,6 +1,8 @@
 from pathlib import Path
 from yt_dlp import YoutubeDL
 
+from services.media import prepare_video_for_telegram
+
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
@@ -24,7 +26,7 @@ def download_video(url: str):
     if filename.endswith(".webm") or filename.endswith(".mkv"):
         filename = str(Path(filename).with_suffix(".mp4"))
 
-    return filename, info["title"]
+    return prepare_video_for_telegram(filename), info["title"]
 
 
 def download_audio(url: str):
